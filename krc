@@ -1,0 +1,140 @@
+#!/bin/bash
+# kak remote control, reimplementation of alexherbo2's connect.kak
+
+function ensure-session {
+    if [[ -z $session ]]; then
+        echo "$0 $1:" 'No kak $session' >&2
+        exit
+    fi
+}
+
+function send {
+    ensure-session
+    d=$(mktemp --suffix=-krc-send)
+    echo "$@" > "$d"
+    if [[ -n $client ]]; then
+        echo "eval -try-client $client %{ source $d; nop %sh{ rm $d } }" | kak -p "$session"
+    else
+        echo "source $d; nop %sh{ rm $d }" | kak -p "$session"
+    fi
+}
+
+function get {
+    ensure-session
+    d=$(mktemp -d --suffix=-krc-get)
+    fifo="$d/fifo"
+    mkfifo "$fifo"
+    trap "rm -rf $d" EXIT
+    krc send echo -to-file "$fifo" "$@"
+    cat "$fifo"
+}
+
+function attach {
+    ensure-session
+    kak -c "$session" "$@"
+}
+
+function attach-with {
+    ensure-session
+    d=$(mktemp --suffix=-kak-attach-with)
+    echo "$@" > "$d"
+    kak -c "$session" -e "source $d; nop %sh{ rm $d }"
+}
+
+function buffers {
+    eval "set -- $(krc get %val[buflist])"
+    for buf; do
+        echo "$buf"
+    done
+}
+
+function init {
+    # source krc init
+    DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+    export PATH=$DIR:$PATH
+
+    if [[ -z $session ]]; then
+        session=$(kak -l | grep -v dead | tail -n 1)
+    fi
+    export session
+
+    if [[ -n $session && -z $client ]]; then
+        clients=$(krc get %val[client_list])
+        client=$(echo $clients | cut '-d ' -f 1)
+    fi
+    export client
+
+    export NNN_OPENER='krc :edit'
+    export OPENER='krc :edit'
+    export EDITOR='krc edit'
+    export VISUAL='krc edit'
+    export PAGER='krc edit'
+}
+
+function kakscript {
+    # eval %sh{ krc kakscript }
+    SCRIPT=$(realpath $0)
+    echo '
+        def connect -override -params 1.. %{
+            %arg{1} bash -c %{
+                export session=$1
+                export client=$2
+                source $3 init
+                cd $4
+                shift 5
+                [ "$1" ] && "$@" || "$SHELL"
+            } -- %val{session} %val{client} '"$SCRIPT"' %sh{pwd} %arg{@}
+        }
+
+        def shell -params 1.. -override %{
+            nop %sh{
+                setsid "$@" < /dev/null > /dev/null 2>&1 &
+            }
+        }
+
+        def connect-shell -params 1.. -override %{
+            connect shell %arg{@}
+        }
+
+        def connect-terminal -params .. -override %{
+            connect terminal %arg{@}
+        }
+    '
+}
+
+function env {
+    echo session: "$session"
+    echo client: "$client"
+}
+
+function :edit {
+    krc send edit "$@" ';' focus
+}
+
+function edit {
+    krc attach-with edit "$@"
+}
+
+function :man {
+    krc send man "$@" ';' focus
+}
+
+function man {
+    krc attach-with man "$@"
+}
+
+if [[ $(type -t $1) == 'function' ]]; then
+    f=$1
+    shift
+    "$f" "$@"
+else
+    functions=$(grep -Po '^function \K\w+' $0)
+    printf 'kakoune-remote-control (krc)\n'
+    printf 'Usage:\n    %s [' "$0"
+    sep=''
+    for fn in $functions; do
+        printf '%s%s' "$sep" "$fn"
+        sep='|'
+    done
+    printf '] [...ARGS]\n'
+fi
