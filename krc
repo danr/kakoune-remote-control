@@ -1,7 +1,8 @@
 #!/bin/bash
 # kak remote control, reimplementation of alexherbo2's connect.kak
 
-function ensure-session {
+function -ensure-env {
+    # Exit program if $session is not set.
     if [[ -z $session ]]; then
         echo "$0 $1:" 'No kak $session' >&2
         exit
@@ -9,7 +10,8 @@ function ensure-session {
 }
 
 function send {
-    ensure-session
+    # Evaluate kak script in $session. Run in $client if set.
+    -ensure-env
     d=$(mktemp --suffix=-krc-send)
     echo "$@" > "$d"
     if [[ -n $client ]]; then
@@ -20,7 +22,8 @@ function send {
 }
 
 function get {
-    ensure-session
+    # Print the result of echo arguments in kak $session on stdout. Run in $client if set.
+    -ensure-env
     d=$(mktemp -d --suffix=-krc-get)
     fifo="$d/fifo"
     mkfifo "$fifo"
@@ -30,18 +33,21 @@ function get {
 }
 
 function attach {
-    ensure-session
+    # Start a new kak client in $session.
+    -ensure-env
     kak -c "$session" "$@"
 }
 
 function attach-with {
-    ensure-session
+    # Start a new kak client in $session, evaluating the argument kak script at startup.
+    -ensure-env
     d=$(mktemp --suffix=-kak-attach-with)
     echo "$@" > "$d"
     kak -c "$session" -e "source $d; nop %sh{ rm $d }"
 }
 
 function buffers {
+    # List the buffers in $session.
     eval "set -- $(krc get %val[buflist])"
     for buf; do
         echo "$buf"
@@ -49,7 +55,7 @@ function buffers {
 }
 
 function init {
-    # source krc init
+    # Run in bash with `source krc init` to set $session and $client.
     DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
     export PATH=$DIR:$PATH
 
@@ -72,8 +78,8 @@ function init {
 }
 
 function kakscript {
-    # eval %sh{ krc kakscript }
-    SCRIPT=$(realpath $0)
+    # Run in kak with `eval %sh{ krc kakscript }` to define :connect.
+    self=$(realpath $0)
     echo '
         def connect -override -params 1.. %{
             %arg{1} bash -c %{
@@ -83,7 +89,7 @@ function kakscript {
                 cd $4
                 shift 5
                 [ "$1" ] && "$@" || "$SHELL"
-            } -- %val{session} %val{client} '"$SCRIPT"' %sh{pwd} %arg{@}
+            } -- %val{session} %val{client} '"$self"' %sh{pwd} %arg{@}
         }
 
         def shell -params 1.. -override %{
@@ -103,24 +109,29 @@ function kakscript {
 }
 
 function env {
+    # Print the current $session and $client to stdout.
     echo session: "$session"
     echo client: "$client"
 }
 
-function :edit {
-    krc send edit "$@" ';' focus
-}
-
 function edit {
+    # Edit the argument file in $session in a new client.
     krc attach-with edit "$@"
 }
 
-function :man {
-    krc send man "$@" ';' focus
+function :edit {
+    # Edit the argument file in $client and focus it.
+    krc send edit "$@" ';' focus
 }
 
 function man {
+    # Open the argument man page in $session in a new client.
     krc attach-with man "$@"
+}
+
+function :man {
+    # Open the argument man page in $client and focus it.
+    krc send man "$@" ';' focus
 }
 
 if [[ $(type -t $1) == 'function' ]]; then
@@ -128,13 +139,19 @@ if [[ $(type -t $1) == 'function' ]]; then
     shift
     "$f" "$@"
 else
-    functions=$(grep -Po '^function \K\w+' $0)
     printf 'kakoune-remote-control (krc)\n'
-    printf 'Usage:\n    %s [' "$0"
-    sep=''
+
+    printf 'Usage:\n    %s COMMAND [...ARGS]\n' "$0"
+    printf '\n'
+    printf 'Where COMMAND is one of:\n'
+
+    self=$(realpath $0)
+    functions=$(grep -Po '^function \K[:\w][\w-]+' "$self")
     for fn in $functions; do
-        printf '%s%s' "$sep" "$fn"
-        sep='|'
+        paste <(printf '  %-12s' "$fn") <(
+            cat "$self" |
+            sed -n "/^function $fn /,/^}/p" | sed -n 's/^\s\+\#\s\+//p' |
+            fmt -w $(($(tput cols) - 15))
+        ) | column -s $'\t' -t
     done
-    printf '] [...ARGS]\n'
 fi
