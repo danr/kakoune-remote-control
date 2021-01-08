@@ -141,17 +141,20 @@ if [[ $(type -t $1) == 'function' ]]; then
 else
     printf 'kakoune-remote-control (krc)\n'
 
-    printf 'Usage:\n    %s COMMAND [...ARGS]\n' "$0"
+    printf 'Usage:\n    %s COMMAND [...ARGS]\n' $(basename "$0")
     printf '\n'
     printf 'Where COMMAND is one of:\n'
 
     self=$(realpath $0)
     functions=$(grep -Po '^function \K[:\w][\w-]+' "$self")
+    if [[ -z "$cols" ]]; then
+        cols=$(tput cols)
+    fi
     for fn in $functions; do
         paste <(printf '  %-12s' "$fn") <(
             cat "$self" |
             sed -n "/^function $fn /,/^}/p" | sed -n 's/^\s\+\#\s\+//p' |
-            fmt -w $(($(tput cols) - 15))
+            fmt -w $(($cols - 15))
         ) | column -s $'\t' -t
     done
 fi
