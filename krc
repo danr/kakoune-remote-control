@@ -123,9 +123,24 @@ function attach {
 function attach-with {
     # Start a new kak client in $session, running the argument kak command at startup.
     -ensure-env
-    d=$(mktemp --suffix=-kak-attach-with)
+    d=$(mktemp --suffix=-krc-attach-with)
     -kak-escape "$@" > "$d"
     kak -c "$session" -e "source $d; nop %sh{ rm $d }"
+}
+
+function fifo {
+    # Send output of argument command, or read stdin, to a fifo buffer.
+    -ensure-env
+    d=$(mktemp -d --suffix=-krc-fifo)
+    fifo="$d/fifo"
+    mkfifo "$fifo"
+    trap "rm -rf $d" EXIT
+    send edit! -fifo "$fifo" '*fifo*'
+    if [[ $# > 0 ]]; then
+        "$@" > "$fifo" 2>&1 &
+    elif [[ ! -t 0 ]]; then
+        cat > "$fifo"
+    fi
 }
 
 if [[ $(type -t $1) == 'function' ]]; then
