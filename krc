@@ -43,7 +43,7 @@ function init {
     export session
 
     if [[ -n $session && -z $client ]]; then
-        clients=$(krc get %val[client_list])
+        clients=$(get %val[client_list])
         client=$(echo $clients | cut '-d ' -f 1)
     fi
     export client
@@ -149,7 +149,7 @@ function attach-with {
 
 function buffers {
     # List the buffers in $session.
-    eval "set -- $(krc get %val[buflist])"
+    eval "set -- $(get %val[buflist])"
     for buf; do
         echo "$buf"
     done
@@ -157,28 +157,28 @@ function buffers {
 
 function :focus {
     # Focus the $client window in $session.
-    krc send focus
+    send focus
 }
 
 function edit {
     # Edit the argument file in $session in a new client.
-    krc attach-with edit "$@"
+    attach-with edit "$@"
 }
 
 function :edit {
     # Edit the argument file in $client and focus it.
-    krc send edit "$@"
+    send edit "$@"
     :focus
 }
 
 function man {
     # Open the argument man page in $session in a new client.
-    krc attach-with man "$@"
+    attach-with man "$@"
 }
 
 function :man {
     # Open the argument man page in $client and focus it.
-    krc send man "$@"
+    send man "$@"
     :focus
 }
 
