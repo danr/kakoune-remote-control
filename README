@@ -3,17 +3,11 @@ Usage:
     krc COMMAND [...ARGS]
 
 Where COMMAND is one of:
-  init          Run in bash with `source krc init` to set $session and $client.
-  kakscript     Run in kak with `eval %sh{ krc kakscript }` to define :connect.
+  kak-defs      Run in kak with `eval %sh{ krc kak-defs }` to define :connect.
   env           Print the current $session and $client to stdout.
-  send          Send one kak command to $session. Run in $client if set.
   raw-send      Evaluate kak script from stdin in $session. Run in $client if set.
+  send          Run one kak command in $session, in $client if set.
+  send-fg       Run one kak command in $session, in $client if set. Focus the client afterwards.
   get           Print the echo of arguments in kak $session on stdout. Run in $client if set.
   attach        Start a new kak client in $session.
-  attach-with   Start a new kak client in $session, evaluating the argument kak script at startup.
-  buffers       List the buffers in $session.
-  :focus        Focus the $client window in $session.
-  edit          Edit the argument file in $session in a new client.
-  :edit         Edit the argument file in $client and focus it.
-  man           Open the argument man page in $session in a new client.
-  :man          Open the argument man page in $client and focus it.
+  attach-with   Start a new kak client in $session, running the argument kak command at startup.

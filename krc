@@ -27,47 +27,23 @@ function -kak-escape() {
 function -ensure-env {
     # Exit program if $session is not set.
     if [[ -z $session ]]; then
-        echo "$0 $1:" 'No kak $session' >&2
+        echo 'kak $session not set' >&2
         exit
     fi
 }
 
-function init {
-    # Run in bash with `source krc init` to set $session and $client.
-    DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
-    export PATH=$DIR:$PATH
-
-    if [[ -z $session ]]; then
-        session=$(kak -l | grep -v dead | tail -n 1)
-    fi
-    export session
-
-    if [[ -n $session && -z $client ]]; then
-        clients=$(get %val[client_list])
-        client=$(echo $clients | cut '-d ' -f 1)
-    fi
-    export client
-
-    export NNN_OPENER='krc :edit'
-    export OPENER='krc :edit'
-    export EDITOR='krc edit'
-    export VISUAL='krc edit'
-    export PAGER='krc edit'
-}
-
-function kakscript {
-    # Run in kak with `eval %sh{ krc kakscript }` to define :connect.
+function kak-defs {
+    # Run in kak with `eval %sh{ krc kak-defs }` to define :connect.
     self=$(realpath $0)
     echo '
         def connect -override -params 1.. %{
             %arg{1} bash -c %{
                 export session=$1
                 export client=$2
-                source $3 init
-                cd $4
-                shift 5
+                cd $3
+                shift 4
                 [ "$1" ] && "$@" || "$SHELL"
-            } -- %val{session} %val{client} '"$self"' %sh{pwd} %arg{@}
+            } -- %val{session} %val{client} %sh{pwd} %arg{@}
         }
 
         def shell -params 1.. -override %{
@@ -93,11 +69,6 @@ function env {
 }
 
 
-function send {
-    # Send one kak command to $session. Run in $client if set.
-    -kak-escape "$@" | raw-send
-}
-
 function raw-send {
     # Evaluate kak script from stdin in $session. Run in $client if set.
     -ensure-env
@@ -108,6 +79,16 @@ function raw-send {
     else
         echo "source $d; nop %sh{ rm $d }" | kak -p "$session"
     fi
+}
+
+function send {
+    # Run one kak command in $session, in $client if set.
+    -kak-escape "$@" | raw-send
+}
+
+function send-fg {
+    # Run one kak command in $session, in $client if set. Focus the client afterwards.
+    { -kak-escape "$@"; echo focus; } | raw-send
 }
 
 function get {
@@ -140,46 +121,11 @@ function attach {
 }
 
 function attach-with {
-    # Start a new kak client in $session, evaluating the argument kak script at startup.
+    # Start a new kak client in $session, running the argument kak command at startup.
     -ensure-env
     d=$(mktemp --suffix=-kak-attach-with)
-    echo "$@" > "$d"
+    -kak-escape "$@" > "$d"
     kak -c "$session" -e "source $d; nop %sh{ rm $d }"
-}
-
-function buffers {
-    # List the buffers in $session.
-    eval "set -- $(get %val[buflist])"
-    for buf; do
-        echo "$buf"
-    done
-}
-
-function :focus {
-    # Focus the $client window in $session.
-    send focus
-}
-
-function edit {
-    # Edit the argument file in $session in a new client.
-    attach-with edit "$@"
-}
-
-function :edit {
-    # Edit the argument file in $client and focus it.
-    send edit "$@"
-    :focus
-}
-
-function man {
-    # Open the argument man page in $session in a new client.
-    attach-with man "$@"
-}
-
-function :man {
-    # Open the argument man page in $client and focus it.
-    send man "$@"
-    :focus
 }
 
 if [[ $(type -t $1) == 'function' ]]; then

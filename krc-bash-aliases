@@ -1,0 +1,27 @@
+#!/bin/sh
+
+function kak { krc attach; }
+
+function man { krc send-fg man "$@"; }
+function edit { krc send-fg edit "$@"; }
+
+function val { krc get "%val[$1]"; }
+function opt { krc get "%opt[$1]"; }
+function reg { krc get "%reg[$1]"; }
+
+function setw { krc send set window "$@"; }
+function setb { krc send set buffer "$@"; }
+function setg { krc send set global "$@"; }
+
+function send { krc send "$@"; }
+function :send { krc send-fg "$@"; }
+
+function buffers {
+    eval "set -- $(krc get %val[buflist])"
+    printf "%s\n" "$@"
+}
+
+alias k=kak
+alias e=edit
+alias b=buffers
+alias ke='source <(krc-choose-env)'
