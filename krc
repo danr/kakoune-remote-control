@@ -1,57 +1,35 @@
 #!/bin/bash
 # kak remote control, reimplementation of alexherbo2's connect.kak
 
+function -kak-escape() {
+  # From https://github.com/alexherbo2/prelude.kak/blob/master/rc/prelude.sh
+  # Original implementation by Screwtape https://github.com/mawww/kakoune/issues/3340
+  for text do
+    printf "'"
+    while true; do
+      case "$text" in
+        *"'"*)
+          head=${text%%"'"*}
+          tail=${text#*"'"}
+          printf "%s''" "$head"
+          text=$tail
+          ;;
+        *)
+          printf "%s' " "$text"
+          break
+          ;;
+      esac
+    done
+  done
+  printf "\n"
+}
+
 function -ensure-env {
     # Exit program if $session is not set.
     if [[ -z $session ]]; then
         echo "$0 $1:" 'No kak $session' >&2
         exit
     fi
-}
-
-function send {
-    # Evaluate kak script in $session. Run in $client if set.
-    -ensure-env
-    d=$(mktemp --suffix=-krc-send)
-    echo "$@" > "$d"
-    if [[ -n $client ]]; then
-        echo "eval -try-client $client %{ source $d; nop %sh{ rm $d } }" | kak -p "$session"
-    else
-        echo "source $d; nop %sh{ rm $d }" | kak -p "$session"
-    fi
-}
-
-function get {
-    # Print the result of echo arguments in kak $session on stdout. Run in $client if set.
-    -ensure-env
-    d=$(mktemp -d --suffix=-krc-get)
-    fifo="$d/fifo"
-    mkfifo "$fifo"
-    trap "rm -rf $d" EXIT
-    krc send echo -to-file "$fifo" "$@"
-    cat "$fifo"
-}
-
-function attach {
-    # Start a new kak client in $session.
-    -ensure-env
-    kak -c "$session" "$@"
-}
-
-function attach-with {
-    # Start a new kak client in $session, evaluating the argument kak script at startup.
-    -ensure-env
-    d=$(mktemp --suffix=-kak-attach-with)
-    echo "$@" > "$d"
-    kak -c "$session" -e "source $d; nop %sh{ rm $d }"
-}
-
-function buffers {
-    # List the buffers in $session.
-    eval "set -- $(krc get %val[buflist])"
-    for buf; do
-        echo "$buf"
-    done
 }
 
 function init {
@@ -114,6 +92,74 @@ function env {
     echo client: "$client"
 }
 
+
+function send {
+    # Send one kak command to $session. Run in $client if set.
+    -kak-escape "$@" | raw-send
+}
+
+function raw-send {
+    # Evaluate kak script from stdin in $session. Run in $client if set.
+    -ensure-env
+    d=$(mktemp --suffix=-krc-send)
+    cat > "$d"
+    if [[ -n $client ]]; then
+        echo "eval -try-client $client %{ source $d; nop %sh{ rm $d } }" | kak -p "$session"
+    else
+        echo "source $d; nop %sh{ rm $d }" | kak -p "$session"
+    fi
+}
+
+function get {
+    # Print the echo of arguments in kak $session on stdout. Run in $client if set.
+    d=$(mktemp -d --suffix=-krc-get)
+    out="$d/out"
+    err="$d/err"
+    touch "$out"
+    touch "$err"
+    fifo="$d/fifo"
+    mkfifo "$fifo"
+    trap "rm -rf $d" EXIT
+    echo "
+         try %{
+             echo -to-file $out "$@"
+         } catch %{
+             echo -to-file $err %val{error}
+         }
+         echo -to-file $fifo done
+    " | raw-send
+    cat "$fifo" >/dev/null
+    cat "$out"
+    cat "$err" >&2
+}
+
+function attach {
+    # Start a new kak client in $session.
+    -ensure-env
+    kak -c "$session" "$@"
+}
+
+function attach-with {
+    # Start a new kak client in $session, evaluating the argument kak script at startup.
+    -ensure-env
+    d=$(mktemp --suffix=-kak-attach-with)
+    echo "$@" > "$d"
+    kak -c "$session" -e "source $d; nop %sh{ rm $d }"
+}
+
+function buffers {
+    # List the buffers in $session.
+    eval "set -- $(krc get %val[buflist])"
+    for buf; do
+        echo "$buf"
+    done
+}
+
+function :focus {
+    # Focus the $client window in $session.
+    krc send focus
+}
+
 function edit {
     # Edit the argument file in $session in a new client.
     krc attach-with edit "$@"
@@ -121,7 +167,8 @@ function edit {
 
 function :edit {
     # Edit the argument file in $client and focus it.
-    krc send edit "$@" ';' focus
+    krc send edit "$@"
+    :focus
 }
 
 function man {
@@ -131,7 +178,8 @@ function man {
 
 function :man {
     # Open the argument man page in $client and focus it.
-    krc send man "$@" ';' focus
+    krc send man "$@"
+    :focus
 }
 
 if [[ $(type -t $1) == 'function' ]]; then
