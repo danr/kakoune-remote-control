@@ -3,12 +3,14 @@ Usage:
     krc COMMAND [...ARGS]
 
 Where COMMAND is one of:
-  kak-defs      Run in kak with `eval %sh{ krc kak-defs }` to define :connect.
-  env           Print the current $session and $client to stdout.
-  raw-send      Evaluate kak script from stdin in $session. Run in $client if set.
-  send          Run one kak command in $session, in $client if set.
-  send-fg       Run one kak command in $session, in $client if set. Focus the client afterwards.
-  get           Print the echo of arguments in kak $session on stdout. Run in $client if set.
-  attach        Start a new kak client in $session.
-  attach-with   Start a new kak client in $session, running the argument kak command at startup.
-  fifo          Send output of argument command, or read stdin, to a fifo buffer.
+  kak-defs       Run in kak with `eval %sh{ krc kak-defs }` to define :connect.
+  env            Print the current $session and $client to stdout.
+  raw-send       Evaluate kak script from stdin in $session. Run in $client if set.
+  raw-send-sync  Evaluate kak script from stdin in $session, waiting for completion. Run in
+                 $client if set. Any errors are written on stderr.
+  send           Run one kak command in $session, in $client if set.
+  send-fg        Run one kak command in $session, in $client if set. Focus the client afterwards.
+  get            Print the echo of arguments in kak $session on stdout. Run in $client if set.
+  attach         Start a new kak client in $session.
+  attach-with    Start a new kak client in $session, running the argument kak command at startup.
+  fifo           Send output of argument command, or read stdin, to a fifo buffer.

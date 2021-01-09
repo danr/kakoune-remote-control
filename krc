@@ -70,13 +70,41 @@ function env {
 function raw-send {
     # Evaluate kak script from stdin in $session. Run in $client if set.
     ensure-env
-    d=$(mktemp --suffix=-krc-send)
-    cat > "$d"
+    script=$(mktemp --suffix=-krc-raw-send)
+    cat > "$script"
+    eval_flags=""
     if [[ -n $client ]]; then
-        echo "eval -try-client $client %{ source $d; nop %sh{ rm $d } }" | kak -p "$session"
-    else
-        echo "source $d; nop %sh{ rm $d }" | kak -p "$session"
+        eval_flags="-try-client $client"
     fi
+    echo "
+        try %{eval $eval_flags %sh{cat $script; rm $script}} catch %{
+            echo -debug krc: %val{error}
+            eval $eval_flags %{echo -markup {Error}krc: %val{error}}
+        }
+    " | kak -p "$session"
+}
+
+function raw-send-sync {
+    # Evaluate kak script from stdin in $session, waiting for completion. Run in $client if set. Any errors are written on stderr.
+    d=$(mktemp -d --suffix=-krc-raw-send-sync)
+    trap "rm -rf $d" EXIT
+    script="$d/script"
+    cat > "$script"
+    err="$d/err"
+    touch "$err"
+    fifo="$d/fifo"
+    mkfifo "$fifo"
+    echo -e "
+        try %{eval %sh{cat $script}
+            echo -to-file $fifo done
+        } catch %{
+            echo -to-file $err %val{error} '\n'
+            echo -to-file $fifo done
+            fail %val{error}
+        }
+    " | raw-send
+    cat "$fifo" >/dev/null
+    cat "$err" >&2
 }
 
 function send {
@@ -91,25 +119,11 @@ function send-fg {
 
 function get {
     # Print the echo of arguments in kak $session on stdout. Run in $client if set.
-    d=$(mktemp -d --suffix=-krc-get)
-    out="$d/out"
-    err="$d/err"
+    out=$(mktemp --suffix=-krc-get)
+    trap "rm -rf $out" EXIT
     touch "$out"
-    touch "$err"
-    fifo="$d/fifo"
-    mkfifo "$fifo"
-    trap "rm -rf $d" EXIT
-    echo "
-         try %{
-             echo -to-file $out $*
-         } catch %{
-             echo -to-file $err %val{error}
-         }
-         echo -to-file $fifo done
-    " | raw-send
-    cat "$fifo" >/dev/null
+    echo echo -to-file "$out" "$@" | raw-send-sync
     cat "$out"
-    cat "$err" >&2
 }
 
 function attach {
@@ -121,9 +135,9 @@ function attach {
 function attach-with {
     # Start a new kak client in $session, running the argument kak command at startup.
     ensure-env
-    d=$(mktemp --suffix=-krc-attach-with)
-    kak-escape "$@" > "$d"
-    kak -c "$session" -e "source $d; nop %sh{ rm $d }"
+    script=$(mktemp --suffix=-krc-attach-with)
+    kak-escape "$@" > "$script"
+    kak -c "$session" -e "eval %sh{cat $script; rm $script}"
 }
 
 function fifo {
@@ -158,10 +172,10 @@ else
         cols=$(tput cols)
     fi
     for fn in $functions; do
-        paste <(printf '  %-12s' "$fn") <(
+        paste <(printf '  %-13s' "$fn") <(
             cat "$self" |
             sed -n "/^function $fn /,/^}/p" | sed -n 's/^\s\+\#\s\+//p' |
-            fmt -w $((cols - 15))
+            fmt -w $((cols - 16))
         ) | column -s $'\t' -t
     done
 fi
