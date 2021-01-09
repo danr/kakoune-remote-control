@@ -113,8 +113,13 @@ function send {
 }
 
 function send-fg {
-    # Run one kak command in $session, in $client if set. Focus the client afterwards.
-    { kak-escape "$@"; echo focus; } | raw-send
+    # Focus the $client and run one kak command in $session.
+    { echo focus; kak-escape "$@"; } | raw-send
+}
+
+function send-sync {
+    # Run one kak command in $session (in $client if set) and wait for the result.
+    kak-escape "$@" | raw-send-sync
 }
 
 function get {

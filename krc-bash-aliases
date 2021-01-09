@@ -9,12 +9,13 @@ function val { krc get "%val[$1]"; }
 function opt { krc get "%opt[$1]"; }
 function reg { krc get "%reg[$1]"; }
 
-function setw { krc send set window "$@"; }
-function setb { krc send set buffer "$@"; }
-function setg { krc send set global "$@"; }
+function setw { krc send-sync set window "$@"; }
+function setb { krc send-sync set buffer "$@"; }
+function setg { krc send-sync set global "$@"; }
 
 function send { krc send "$@"; }
 function :send { krc send-fg "$@"; }
+function send-sync { krc send-sync "$@"; }
 
 function buffers {
     eval "set -- $(krc get %val[buflist])"

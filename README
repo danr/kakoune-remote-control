@@ -9,7 +9,8 @@ Where COMMAND is one of:
   raw-send-sync  Evaluate kak script from stdin in $session, waiting for completion. Run in
                  $client if set. Any errors are written on stderr.
   send           Run one kak command in $session, in $client if set.
-  send-fg        Run one kak command in $session, in $client if set. Focus the client afterwards.
+  send-fg        Focus the $client and run one kak command in $session.
+  send-sync      Run one kak command in $session (in $client if set) and wait for the result.
   get            Print the echo of arguments in kak $session on stdout. Run in $client if set.
   attach         Start a new kak client in $session.
   attach-with    Start a new kak client in $session, running the argument kak command at startup.
