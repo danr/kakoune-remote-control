@@ -22,6 +22,20 @@ function buffers {
     printf "%s\n" "$@"
 }
 
+function fifo {
+    # Send output of argument command, or read stdin, to a fifo buffer.
+    d=$(mktemp -d --suffix=-krc-fifo)
+    fifo="$d/fifo"
+    mkfifo "$fifo"
+    trap "rm -rf $d" EXIT
+    krc send edit! -fifo "$fifo" '*fifo*'
+    if [[ $# -gt 0 ]]; then
+        "$@" > "$fifo" 2>&1 &
+    elif [[ ! -t 0 ]]; then
+        cat > "$fifo"
+    fi
+}
+
 alias k=kak
 alias e=edit
 alias b=buffers

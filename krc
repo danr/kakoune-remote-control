@@ -145,21 +145,6 @@ function attach-with {
     kak -c "$session" -e "eval %sh{cat $script; rm $script}"
 }
 
-function fifo {
-    # Send output of argument command, or read stdin, to a fifo buffer.
-    ensure-env
-    d=$(mktemp -d --suffix=-krc-fifo)
-    fifo="$d/fifo"
-    mkfifo "$fifo"
-    trap "rm -rf $d" EXIT
-    send edit! -fifo "$fifo" '*fifo*'
-    if [[ $# -gt 0 ]]; then
-        "$@" > "$fifo" 2>&1 &
-    elif [[ ! -t 0 ]]; then
-        cat > "$fifo"
-    fi
-}
-
 if [[ $(type -t -- "$1") == 'function' ]]; then
     f=$1
     shift
