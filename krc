@@ -1,7 +1,7 @@
 #!/bin/bash
 # kak remote control, reimplementation of alexherbo2's connect.kak
 
-function -kak-escape() {
+kak-escape() {
   # From https://github.com/alexherbo2/prelude.kak/blob/master/rc/prelude.sh
   # Original implementation by Screwtape https://github.com/mawww/kakoune/issues/3340
   for text do
@@ -24,7 +24,7 @@ function -kak-escape() {
   printf "\n"
 }
 
-function -ensure-env {
+ensure-env() {
     # Exit program if $session is not set.
     if [[ -z $session ]]; then
         echo 'kak $session not set' >&2
@@ -34,7 +34,6 @@ function -ensure-env {
 
 function kak-defs {
     # Run in kak with `eval %sh{ krc kak-defs }` to define :connect.
-    self=$(realpath $0)
     echo '
         def connect -override -params 1.. %{
             %arg{1} bash -c %{
@@ -68,10 +67,9 @@ function env {
     echo client: "$client"
 }
 
-
 function raw-send {
     # Evaluate kak script from stdin in $session. Run in $client if set.
-    -ensure-env
+    ensure-env
     d=$(mktemp --suffix=-krc-send)
     cat > "$d"
     if [[ -n $client ]]; then
@@ -83,12 +81,12 @@ function raw-send {
 
 function send {
     # Run one kak command in $session, in $client if set.
-    -kak-escape "$@" | raw-send
+    kak-escape "$@" | raw-send
 }
 
 function send-fg {
     # Run one kak command in $session, in $client if set. Focus the client afterwards.
-    { -kak-escape "$@"; echo focus; } | raw-send
+    { kak-escape "$@"; echo focus; } | raw-send
 }
 
 function get {
@@ -103,7 +101,7 @@ function get {
     trap "rm -rf $d" EXIT
     echo "
          try %{
-             echo -to-file $out "$@"
+             echo -to-file $out $*
          } catch %{
              echo -to-file $err %val{error}
          }
@@ -116,46 +114,46 @@ function get {
 
 function attach {
     # Start a new kak client in $session.
-    -ensure-env
+    ensure-env
     kak -c "$session" "$@"
 }
 
 function attach-with {
     # Start a new kak client in $session, running the argument kak command at startup.
-    -ensure-env
+    ensure-env
     d=$(mktemp --suffix=-krc-attach-with)
-    -kak-escape "$@" > "$d"
+    kak-escape "$@" > "$d"
     kak -c "$session" -e "source $d; nop %sh{ rm $d }"
 }
 
 function fifo {
     # Send output of argument command, or read stdin, to a fifo buffer.
-    -ensure-env
+    ensure-env
     d=$(mktemp -d --suffix=-krc-fifo)
     fifo="$d/fifo"
     mkfifo "$fifo"
     trap "rm -rf $d" EXIT
     send edit! -fifo "$fifo" '*fifo*'
-    if [[ $# > 0 ]]; then
+    if [[ $# -gt 0 ]]; then
         "$@" > "$fifo" 2>&1 &
     elif [[ ! -t 0 ]]; then
         cat > "$fifo"
     fi
 }
 
-if [[ $(type -t $1) == 'function' ]]; then
+if [[ $(type -t -- "$1") == 'function' ]]; then
     f=$1
     shift
     "$f" "$@"
 else
     printf 'kakoune-remote-control (krc)\n'
 
-    printf 'Usage:\n    %s COMMAND [...ARGS]\n' $(basename "$0")
+    printf 'Usage:\n    %s COMMAND [...ARGS]\n' "$(basename "$0")"
     printf '\n'
     printf 'Where COMMAND is one of:\n'
 
-    self=$(realpath $0)
-    functions=$(grep -Po '^function \K[:\w][\w-]+' "$self")
+    self=$(realpath "$0")
+    functions=$(grep -Po '^function \K[\w-]+' "$self")
     if [[ -z "$cols" ]]; then
         cols=$(tput cols)
     fi
@@ -163,7 +161,7 @@ else
         paste <(printf '  %-12s' "$fn") <(
             cat "$self" |
             sed -n "/^function $fn /,/^}/p" | sed -n 's/^\s\+\#\s\+//p' |
-            fmt -w $(($cols - 15))
+            fmt -w $((cols - 15))
         ) | column -s $'\t' -t
     done
 fi
