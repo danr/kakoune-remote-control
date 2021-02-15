@@ -13,10 +13,13 @@ get_sessions() {
         set -- $(krc get %val{client_list})
         for client do
             export client
-            echo -ne "$session" "\t"
-            echo -ne "$client" "\t"
-            echo -ne "$(krc get %val[bufname])" "\t"
-            echo -ne "$pwd" "\t"
+            bufname=$(krc get %val{bufname})
+
+            # Set fields
+            set -- "$session" "$client" "$bufname" "$pwd"
+
+            # Print fields, separated by tabs.
+            printf '%s\t' "$@"
             echo
         done
     done
