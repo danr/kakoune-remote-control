@@ -1,6 +1,33 @@
 #!/usr/bin/env bash
 # kak remote control, reimplementation of alexherbo2's connect.kak
 
+main() {
+    if [[ $(type -t -- "$1") == 'function' ]]; then
+        f=$1
+        shift
+        "$f" "$@"
+    else
+        printf 'kakoune-remote-control (krc)\n'
+
+        printf 'Usage:\n    %s COMMAND [...ARGS]\n' "$(basename "$0")"
+        printf '\n'
+        printf 'Where COMMAND is one of:\n'
+
+        self=$(realpath "$0")
+        functions=$(grep -Po '^function \K[\w-]+' "$self")
+        if [[ -z "$cols" ]]; then
+            cols=$(tput cols)
+        fi
+        for fn in $functions; do
+            paste <(printf '  %-13s' "$fn") <(
+                cat "$self" |
+                sed -n "/^function $fn /,/^}/p" | sed -n 's/^\s\+\#\s\+//p' |
+                fmt -w $((cols - 16))
+            ) | column -s $'\t' -t
+        done
+    fi
+}
+
 kak-escape() {
   # From https://github.com/alexherbo2/prelude.kak/blob/master/rc/prelude.sh
   # Original implementation by Screwtape https://github.com/mawww/kakoune/issues/3340
@@ -154,27 +181,4 @@ function edit {
     send-fg edit "$file" "$line" "$column"
 }
 
-if [[ $(type -t -- "$1") == 'function' ]]; then
-    f=$1
-    shift
-    "$f" "$@"
-else
-    printf 'kakoune-remote-control (krc)\n'
-
-    printf 'Usage:\n    %s COMMAND [...ARGS]\n' "$(basename "$0")"
-    printf '\n'
-    printf 'Where COMMAND is one of:\n'
-
-    self=$(realpath "$0")
-    functions=$(grep -Po '^function \K[\w-]+' "$self")
-    if [[ -z "$cols" ]]; then
-        cols=$(tput cols)
-    fi
-    for fn in $functions; do
-        paste <(printf '  %-13s' "$fn") <(
-            cat "$self" |
-            sed -n "/^function $fn /,/^}/p" | sed -n 's/^\s\+\#\s\+//p' |
-            fmt -w $((cols - 16))
-        ) | column -s $'\t' -t
-    done
-fi
+main "$@"
