@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # kak remote control, reimplementation of alexherbo2's connect.kak
 
 kak-escape() {
