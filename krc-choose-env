@@ -9,7 +9,7 @@ get_sessions() {
     get_sessions |
     while read session; do
         export session
-        pwd=$(krc get %sh[pwd])
+        pwd=$(krc get %sh{pwd})
         set -- $(krc get %val{client_list})
         for client do
             export client
