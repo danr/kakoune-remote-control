@@ -10,7 +10,7 @@ get_sessions() {
     while read session; do
         export session
         pwd=$(krc get %sh[pwd])
-        eval "set -- $(krc get -quoting shell %val[client_list])"
+        set -- $(krc get %val{client_list})
         for client; do
             export client
             echo -ne "$session" "\t"
