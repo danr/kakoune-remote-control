@@ -29,26 +29,26 @@ main() {
 }
 
 kak-escape() {
-  # From https://github.com/alexherbo2/prelude.kak/blob/master/rc/prelude.sh
-  # Original implementation by Screwtape https://github.com/mawww/kakoune/issues/3340
-  for text do
-    printf "'"
-    while true; do
-      case "$text" in
-        *"'"*)
-          head=${text%%"'"*}
-          tail=${text#*"'"}
-          printf "%s''" "$head"
-          text=$tail
-          ;;
-        *)
-          printf "%s' " "$text"
-          break
-          ;;
-      esac
+    # From https://github.com/alexherbo2/prelude.kak/blob/master/rc/prelude.sh
+    # Original implementation by Screwtape https://github.com/mawww/kakoune/issues/3340
+    for text do
+        printf "'"
+        while true; do
+            case "$text" in
+                *"'"*)
+                    head=${text%%"'"*}
+                    tail=${text#*"'"}
+                    printf "%s''" "$head"
+                    text=$tail
+                    ;;
+                *)
+                    printf "%s' " "$text"
+                    break
+                    ;;
+            esac
+        done
     done
-  done
-  printf "\n"
+    printf "\n"
 }
 
 ensure-env() {
