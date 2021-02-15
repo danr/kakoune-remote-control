@@ -5,7 +5,7 @@ function kak {
 }
 
 function man { test -n "$session" && krc send-fg man "$@" || kak -e "man $*"; }
-function edit { krc send-fg edit "$@"; }
+function edit { krc edit "$@"; }
 
 function val { krc get "%val[$1]"; }
 function opt { krc get "%opt[$1]"; }

@@ -145,6 +145,15 @@ function attach-with {
     kak -c "$session" -e "eval %sh{cat $script; rm $script}"
 }
 
+function edit {
+    # Edit files.
+    file=$(realpath "$1")
+    line=$2
+    column=$3
+
+    send-fg edit "$file" "$line" "$column"
+}
+
 if [[ $(type -t -- "$1") == 'function' ]]; then
     f=$1
     shift
