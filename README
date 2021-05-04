@@ -14,3 +14,4 @@ Where COMMAND is one of:
   get            Print the echo of arguments in kak $session on stdout. Run in $client if set.
   attach         Start a new kak client in $session.
   attach-with    Start a new kak client in $session, running the argument kak command at startup.
+  edit           Edit files.

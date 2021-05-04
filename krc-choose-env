@@ -1,16 +1,25 @@
-#!/bin/bash
-sessions=$(command kak -l | grep -v dead)
+#!/usr/bin/env bash
+
+get_sessions() {
+    command kak -clear
+    command kak -l
+}
+
 {
-    for session in $sessions; do
+    get_sessions |
+    while read session; do
         export session
-        pwd=$(krc get %sh[pwd])
-        eval "set -- $(krc get -quoting shell %val[client_list])"
-        for client; do
+        pwd=$(krc get %sh{pwd})
+        set -- $(krc get %val{client_list})
+        for client do
             export client
-            echo -ne "$session" "\t"
-            echo -ne "$client" "\t"
-            echo -ne "$(krc get %val[bufname])" "\t"
-            echo -ne "$pwd" "\t"
+            bufname=$(krc get %val{bufname})
+
+            # Set fields
+            set -- "$session" "$client" "$bufname" "$pwd"
+
+            # Print fields, separated by tabs.
+            printf '%s\t' "$@"
             echo
         done
     done
