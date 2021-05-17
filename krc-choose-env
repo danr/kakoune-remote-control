@@ -1,11 +1,12 @@
-#!/bin/bash
-sessions=$(command kak -l | grep -v dead)
+#!/usr/bin/env bash
+command kak -clear
+sessions=$(command kak -l)
 blank=""
 input=""
 for session in $sessions; do
     export session
     pwd=$(krc get %sh[pwd])
-    eval "set -- $(krc get %val[client_list])"
+    eval set -- $(krc get -quoting shell %val[client_list])
     for client; do
         export client
         printf -v blank '%s\n%s' "$blank" "session=$session client=$client krc send info"
