@@ -20,7 +20,7 @@ function :send { krc send-fg "$@"; }
 function send-sync { krc send-sync "$@"; }
 
 function buffers {
-    eval "set -- $(krc get %val[buflist])"
+    eval set -- $(krc get -quoting shell %val[buflist])
     printf "%s\n" "$@"
 }
 
@@ -41,4 +41,4 @@ function fifo {
 alias k=kak
 alias e=edit
 alias b=buffers
-alias ke='source <(krc-choose-env)'
+alias ke='eval $(krc-choose-env)'
